@@ -292,6 +292,31 @@ var flags = append([]cli.Flag{
 		Usage:   "whether global configuration extension should receive netrc data",
 	},
 	&cli.StringFlag{
+		Sources: cli.EnvVars("WOODPECKER_CONFIG_SHARED_REPO"),
+		Name:    "config-shared-repo",
+		Usage:   "owner/name of a shared config repo on the configured forge. when set, pipeline files are fetched from {repo_owner}/{repo_name}/ (fallback {repo_name}/, then default/) and override files of the same name in the triggering repo. empty disables the feature.",
+		Config: cli.StringConfig{
+			TrimSpace: true,
+		},
+	},
+	&cli.StringFlag{
+		Sources: cli.NewValueSourceChain(
+			cli.File(os.Getenv("WOODPECKER_CONFIG_SHARED_TOKEN_FILE")),
+			cli.EnvVar("WOODPECKER_CONFIG_SHARED_TOKEN"),
+		),
+		Name:  "config-shared-token",
+		Usage: "forge access token used to read the shared config repo. must have at least read access to the shared repo.",
+		Config: cli.StringConfig{
+			TrimSpace: true,
+		},
+	},
+	&cli.DurationFlag{
+		Sources: cli.EnvVars("WOODPECKER_CONFIG_SHARED_CACHE_TTL"),
+		Name:    "config-shared-cache-ttl",
+		Usage:   "how long resolved shared-repo folders are cached, keyed by shared-repo HEAD sha and resolved path.",
+		Value:   5 * time.Minute,
+	},
+	&cli.StringFlag{
 		Sources: cli.EnvVars("WOODPECKER_REGISTRY_EXTENSION_ENDPOINT"),
 		Name:    "registry-extension-endpoint",
 		Usage:   "url used for calling registry service endpoint",

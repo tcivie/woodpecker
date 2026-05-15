@@ -78,15 +78,28 @@ func setupConfigService(c *cli.Command, client *utils.Client) (config.Service, e
 	}
 	configFetcher := config.NewForge(timeout, retries)
 
+	services := []config.Service{configFetcher}
+
+	if sharedRepo := strings.TrimSpace(c.String("config-shared-repo")); sharedRepo != "" {
+		sharedFetcher, err := config.NewShared(sharedRepo, c.String("config-shared-token"), c.Duration("config-shared-cache-ttl"))
+		if err != nil {
+			return nil, fmt.Errorf("could not init shared config fetcher: %w", err)
+		}
+		services = append(services, sharedFetcher)
+	}
+
 	if endpoint := c.String("config-extension-endpoint"); endpoint != "" {
 		httpFetcher := config.NewHTTP(endpoint, client, c.Bool("config-extension-netrc"))
 		if c.Bool("config-extension-exclusive") {
 			return httpFetcher, nil
 		}
-		return config.NewCombined(configFetcher, httpFetcher), nil
+		services = append(services, httpFetcher)
 	}
 
-	return configFetcher, nil
+	if len(services) == 1 {
+		return services[0], nil
+	}
+	return config.NewCombined(services...), nil
 }
 
 // setupSignatureKeys generate or load key pair to sign webhooks requests (i.e. used for service extensions).
