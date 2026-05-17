@@ -15,7 +15,6 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -137,20 +136,15 @@ func processQueueTasks(store store.Store, tasks []*model.Task, agentNameMap map[
 
 		if task.AgentID != 0 {
 			name, ok := getAgentName(store, agentNameMap, task.AgentID)
-			if !ok {
-				return nil, fmt.Errorf("agent not found for task %s", task.ID)
+			if ok {
+				taskResponse.AgentName = name
 			}
-
-			taskResponse.AgentName = name
 		}
 
 		if task.PipelineID != 0 {
-			p, err := store.GetPipeline(task.PipelineID)
-			if err != nil {
-				return nil, fmt.Errorf("pipeline not found for task %s", task.ID)
+			if p, err := store.GetPipeline(task.PipelineID); err == nil {
+				taskResponse.PipelineNumber = p.Number
 			}
-
-			taskResponse.PipelineNumber = p.Number
 		}
 
 		result = append(result, taskResponse)
