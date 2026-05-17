@@ -221,6 +221,7 @@
       "loading": "Loading…",
       "no_logs": "No logs",
       "pipeline": "Pipeline #{pipelineId}",
+      "tag": "Tag",
       "log_title": "Step Logs",
       "log_download_error": "An error occurred while downloading the log file",
       "log_delete_confirm": "Do you really want to delete the step logs?",

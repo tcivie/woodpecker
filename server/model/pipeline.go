@@ -59,6 +59,7 @@ type Pipeline struct {
 	IsPrerelease         bool                    `json:"is_prerelease,omitempty" xorm:"is_prerelease"`
 	FromFork             bool                    `json:"from_fork,omitempty"     xorm:"from_fork"`
 	Version              string                  `json:"version"                 xorm:"'version'"`
+	Tag                  string                  `json:"tag,omitempty"           xorm:"tag"`
 }
 
 // APIPipeline TODO remove deprecated properties in next major.
@@ -107,7 +108,18 @@ func (p Pipeline) IsPullRequest() bool {
 type PipelineOptions struct {
 	Branch    string            `json:"branch"`
 	Variables map[string]string `json:"variables"`
+	// Event allows overriding the recorded event type for a pipeline created
+	// via the API. Defaults to "manual" when unset. Allowed values:
+	// push, tag, manual, cron, deployment, release, pull_request.
+	Event string `json:"event,omitempty"`
 } //	@name	PipelineOptions
+
+// PipelinePatch is the request body accepted by PATCH /repos/:repo_id/pipelines/:pipeline_number.
+// All fields are optional; only non-nil fields are applied. This keeps the
+// distinction between "field omitted" and "field set to empty string".
+type PipelinePatch struct {
+	Tag *string `json:"tag,omitempty"`
+} //	@name	PipelinePatch
 
 type CancelInfo struct {
 	CanceledByUser string `json:"canceled_by_user,omitempty"`

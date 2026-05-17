@@ -10,6 +10,7 @@ import type {
   PipelineConfig,
   PipelineFeed,
   PipelineLog,
+  PipelinePatch,
   PullRequest,
   QueueInfo,
   Registry,
@@ -30,6 +31,8 @@ interface RepoListOptions {
 interface PipelineOptions {
   branch: string;
   variables: Record<string, string>;
+  // Optional override for the recorded event type. Defaults to "manual".
+  event?: string;
 }
 
 interface DeploymentOptions {
@@ -132,6 +135,10 @@ export default class WoodpeckerClient extends ApiClient {
 
   async cancelPipeline(repoId: number, pipelineNumber: number): Promise<unknown> {
     return this._post(`/api/repos/${repoId}/pipelines/${pipelineNumber}/cancel`);
+  }
+
+  async updatePipeline(repoId: number, pipelineNumber: number, body: PipelinePatch): Promise<Pipeline> {
+    return this._patch(`/api/repos/${repoId}/pipelines/${pipelineNumber}`, body) as Promise<Pipeline>;
   }
 
   async approvePipeline(repoId: number, pipelineNumber: string): Promise<unknown> {

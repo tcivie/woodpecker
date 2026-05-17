@@ -97,6 +97,13 @@ export interface Pipeline {
   cancel_info: CancelInfo;
 
   version: string;
+
+  // Free-form tag for the pipeline. Set via PATCH /repos/:id/pipelines/:n.
+  tag?: string;
+}
+
+export interface PipelinePatch {
+  tag?: string;
 }
 
 export type PipelineStatus =

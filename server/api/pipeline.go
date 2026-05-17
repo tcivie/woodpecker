@@ -73,7 +73,27 @@ func CreatePipeline(c *gin.Context) {
 		return
 	}
 
-	tmpPipeline := createTmpPipeline(model.EventManual, lastCommit, user, &opts)
+	// Allow callers to override the event type for the pipeline being
+	// created. Defaults to manual when unset. Only a whitelisted subset of
+	// forge events is accepted via this endpoint.
+	event := model.EventManual
+	if opts.Event != "" {
+		switch model.WebhookEvent(opts.Event) {
+		case model.EventPush,
+			model.EventTag,
+			model.EventManual,
+			model.EventCron,
+			model.EventDeploy,
+			model.EventRelease,
+			model.EventPull:
+			event = model.WebhookEvent(opts.Event)
+		default:
+			_ = c.AbortWithError(http.StatusBadRequest, model.ErrInvalidWebhookEvent)
+			return
+		}
+	}
+
+	tmpPipeline := createTmpPipeline(event, lastCommit, user, &opts)
 
 	pl, err := pipeline.Create(c, _store, repo, tmpPipeline)
 	if err != nil {
@@ -89,6 +109,10 @@ func CreatePipeline(c *gin.Context) {
 }
 
 func createTmpPipeline(event model.WebhookEvent, commit *model.Commit, user *model.User, opts *model.PipelineOptions) *model.Pipeline {
+	message := "MANUAL PIPELINE @ " + opts.Branch
+	if event != model.EventManual {
+		message = "API PIPELINE @ " + opts.Branch
+	}
 	return &model.Pipeline{
 		Event:     event,
 		Commit:    commit.SHA,
@@ -96,7 +120,7 @@ func createTmpPipeline(event model.WebhookEvent, commit *model.Commit, user *mod
 		Timestamp: time.Now().UTC().Unix(),
 
 		Avatar:  user.Avatar,
-		Message: "MANUAL PIPELINE @ " + opts.Branch,
+		Message: message,
 
 		Ref:                 opts.Branch,
 		AdditionalVariables: opts.Variables,
@@ -226,6 +250,52 @@ func DeletePipeline(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+// PatchPipeline
+//
+//	@Summary		Update mutable fields on a pipeline
+//	@Description	Currently supports updating the free-form tag field only.
+//	@Router			/repos/{repo_id}/pipelines/{pipeline_number} [patch]
+//	@Produce		json
+//	@Success		200	{object}	Pipeline
+//	@Tags			Pipelines
+//	@Param			Authorization	header	string			true	"Insert your personal access token"	default(Bearer <personal access token>)
+//	@Param			repo_id			path	int				true	"the repository id"
+//	@Param			pipeline_number	path	int				true	"the number of the pipeline"
+//	@Param			patch			body	PipelinePatch	true	"the fields to update"
+func PatchPipeline(c *gin.Context) {
+	_store := store.FromContext(c)
+	repo := session.Repo(c)
+
+	num, err := strconv.ParseInt(c.Param("pipeline_number"), 10, 64)
+	if err != nil {
+		_ = c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	var patch model.PipelinePatch
+	if err := json.NewDecoder(c.Request.Body).Decode(&patch); err != nil {
+		_ = c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	pl, err := _store.GetPipelineNumber(repo, num)
+	if err != nil {
+		handleDBError(c, err)
+		return
+	}
+
+	if patch.Tag != nil {
+		pl.Tag = *patch.Tag
+	}
+
+	if err := _store.UpdatePipeline(pl); err != nil {
+		c.String(http.StatusInternalServerError, "Error updating pipeline. %s", err)
+		return
+	}
+
+	c.JSON(http.StatusOK, pl.ToAPIModel())
 }
 
 // GetPipeline

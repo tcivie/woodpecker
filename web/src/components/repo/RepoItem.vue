@@ -33,9 +33,20 @@
             />
           </div>
 
-          <div class="ml-auto flex shrink-0 items-center gap-x-1">
-            <Icon name="since" />
-            <span>{{ since }}</span>
+          <div class="ml-auto flex shrink-0 items-center gap-x-2">
+            <span
+              v-if="lastPipeline.tag"
+              class="bg-wp-background-300 text-wp-text-100 rounded px-1.5 py-0.5 text-xs italic"
+              :title="$t('repo.pipeline.tag')"
+              >{{ lastPipeline.tag }}</span
+            >
+            <span v-if="lastPipeline.sender" class="text-wp-text-alt-100 truncate text-sm">{{
+              lastPipeline.sender
+            }}</span>
+            <div class="flex items-center gap-x-1">
+              <Icon name="since" />
+              <span>{{ since }}</span>
+            </div>
           </div>
         </template>
 

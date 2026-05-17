@@ -1,0 +1,43 @@
+# Single-stage builder + runtime — builds UI, then server, then produces a
+# small final image. Used for one-off internal patched builds where the
+# upstream CI matrix is not needed.
+
+FROM --platform=$BUILDPLATFORM docker.io/node:22-alpine AS web
+WORKDIR /src
+RUN apk add --no-cache git
+COPY web/ ./web/
+WORKDIR /src/web
+RUN corepack enable && corepack prepare pnpm@latest --activate \
+  && pnpm install --frozen-lockfile \
+  && pnpm build
+
+FROM --platform=$BUILDPLATFORM docker.io/golang:1.26-alpine AS gobuild
+WORKDIR /src
+RUN apk add --no-cache git build-base
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+COPY --from=web /src/web/dist ./web/dist
+ARG TARGETOS=linux
+ARG TARGETARCH=arm64
+ENV CGO_ENABLED=0
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+  go build -tags 'grpcnotrace netgo osusergo' \
+  -ldflags '-s -w' \
+  -o /out/woodpecker-server \
+  go.woodpecker-ci.org/woodpecker/v3/cmd/server
+
+FROM docker.io/alpine:3.23
+RUN apk add --no-cache ca-certificates tzdata \
+  && adduser -u 1000 -g 1000 woodpecker -D \
+  && mkdir -p /var/lib/woodpecker \
+  && chown -R woodpecker:woodpecker /var/lib/woodpecker
+ENV GODEBUG=netdns=go \
+    WOODPECKER_IN_CONTAINER=true \
+    XDG_CACHE_HOME=/var/lib/woodpecker \
+    XDG_DATA_HOME=/var/lib/woodpecker
+EXPOSE 8000 9000 80 443
+COPY --from=gobuild /out/woodpecker-server /bin/woodpecker-server
+USER woodpecker
+HEALTHCHECK CMD ["/bin/woodpecker-server", "ping"]
+ENTRYPOINT ["/bin/woodpecker-server"]

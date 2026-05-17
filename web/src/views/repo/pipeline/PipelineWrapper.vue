@@ -22,6 +22,12 @@
         <div class="flex min-w-0 content-start gap-2">
           <PipelineStatusIcon :status="pipeline.status" class="flex shrink-0" />
           <span class="shrink-0 text-center">{{ $t('repo.pipeline.pipeline', { pipelineId }) }}</span>
+          <span
+            v-if="pipeline.tag"
+            class="bg-wp-background-300 text-wp-text-100 shrink-0 rounded px-1.5 py-0.5 text-xs italic"
+            :title="$t('repo.pipeline.tag')"
+            >{{ pipeline.tag }}</span
+          >
           <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
           <span class="hidden md:inline-block">-</span>
           <RenderMarkdown

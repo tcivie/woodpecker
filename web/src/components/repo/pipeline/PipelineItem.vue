@@ -72,6 +72,11 @@
           <Icon name="since" />
           <span class="truncate">{{ since }}</span>
         </div>
+
+        <div v-if="pipeline.tag" class="flex min-w-0 items-center space-x-2" :title="$t('repo.pipeline.tag')">
+          <Icon name="tag" />
+          <span class="bg-wp-background-300 truncate rounded px-1.5 py-0.5 text-xs italic">{{ pipeline.tag }}</span>
+        </div>
       </div>
     </div>
   </ListItem>
